@@ -61,7 +61,7 @@ done |
 				return(0)
 			}			
 		}
+		BEGIN {printf("namespace\ttype\tname\treplicas\tcontainer\tcpu\tmemory\n")}
 		{ 
-			printf("namespace\ttype\tname\treplicas\tcontainer\tcpu\tmemory\n")
 			printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1,$2,$3,$4,$5,calc_cpu($6),calc_ram($7))
 		}' | bash "${pt}"
