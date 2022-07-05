@@ -1,7 +1,8 @@
 #!/bin/sh
 
-pt=prettytable.sh/prettytable.sh
-chmod +x "${pt}"
+prettytable=prettytable.sh/prettytable.sh
+pt="bash ${prettytable}"
+
 for ns in $(kubectl get ns --no-headers=true | awk '{print $1}'); do
 	for type in deploy ds statefulsets; do
 		for deploy in $(kubectl -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | awk '{print $1}' ) ; do
