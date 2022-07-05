@@ -11,23 +11,23 @@ END
 }
 
 pretty=1
+
 if [ $# -gt 0 ]; then
-	case "$1" in
-	"--tabbed")
+	if [ "${1}" = "--tabbed" ]; then
 		echo Pretty out is off 1>&2
 		pretty=0
-		;;
-	"--hellp")
+		shift
+	fi
+	if [ "${1}" = "--help" ]; then
 		usage
-		;;
-	"-h")
+	fi
+	if [ "${1}" = "-h" ]; then
 		usage
-		;;
-	*)
+	fi	
+	if [ ! -z "${1}" ]; then
 		echo Unknown flag
 		usage
-		;;
-esac
+	fi
 fi
 
 pt=prettytable.sh/prettytable.sh
@@ -99,6 +99,6 @@ done |
 				if [ "${pretty}" -eq 1 ]; then
 					bash "${pt}"
 				else
-					cat | tail -n +1
+					cat | head -n +1
 				fi
 			)
