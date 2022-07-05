@@ -1,7 +1,6 @@
 #!/bin/sh
 
-prettytable=prettytable.sh/prettytable.sh
-pt="bash ${prettytable}"
+pt=prettytable.sh/prettytable.sh
 
 for ns in $(kubectl get ns --no-headers=true | awk '{print $1}'); do
 	for type in deploy ds statefulsets; do
@@ -64,4 +63,4 @@ done |
 		}
 		{ 
 			printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1,$2,$3,$4,$5,calc_cpu($6),calc_ram($7))
-		}' | "${pt}"
+		}' | bash "${pt}"
