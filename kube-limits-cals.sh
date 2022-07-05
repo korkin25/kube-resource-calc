@@ -1,5 +1,34 @@
 #!/bin/sh
 
+usage()
+{
+	cat << END
+${0} options:
+
+	--tabbed -- switch pretty output to space delimited (to use in spreadsheets&etc)
+END
+	exit 1
+}
+
+pretty=1
+if [ $# -gt 0 ]; then
+	case "$1" in
+	"--tabbed")
+		pretty=0
+		;;
+	"--hellp")
+		usage
+		;;
+	"-h")
+		usage
+		;;
+	*)
+		echo Unknown flag
+		usage
+		;;
+esac
+fi
+
 pt=prettytable.sh/prettytable.sh
 
 for ns in $(kubectl get ns --no-headers=true | awk '{print $1}'); do
@@ -64,4 +93,11 @@ done |
 		BEGIN {printf("namespace\ttype\tname\treplicas\tcontainer\tcpu\tmemory\n")}
 		{ 
 			printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1,$2,$3,$4,$5,calc_cpu($6),calc_ram($7))
-		}' | bash "${pt}"
+		}' | 
+			(
+				if [ "${pretty}" -eq 1 ]; then
+					bash "${pt}"
+				else
+					cat | tail -n +1
+				fi
+			)
