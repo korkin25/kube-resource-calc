@@ -1,0 +1,3 @@
+[submodule "prettytable.sh"]
+	path = prettytable.sh
+	url = https://github.com/jakobwesthoff/prettytable.sh.git
