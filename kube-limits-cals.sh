@@ -99,6 +99,6 @@ done |
 				if [ "${pretty}" -eq 1 ]; then
 					bash "${pt}"
 				else
-					cat | head -n +1
+					cat | tail -n +1
 				fi
 			)
