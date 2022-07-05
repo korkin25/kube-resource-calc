@@ -14,6 +14,7 @@ pretty=1
 if [ $# -gt 0 ]; then
 	case "$1" in
 	"--tabbed")
+		echo Pretty out is off 1>&2
 		pretty=0
 		;;
 	"--hellp")
