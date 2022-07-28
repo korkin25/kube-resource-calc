@@ -186,14 +186,7 @@ done |
 			(
 				if [ "${pretty}" -eq 1 ]; then
 					
-					if "${bash}" "${pt}"; then
-						log some problems with downloaded prettytable.sh. Deleted. Redownloading... 1>&2
-						rm "${pt}"
-						download_pretytable "${pt}"
-						log Restarting "${0}"
-						sleep 1
-						exec "${0}"
-					fi
+					"${bash}" "${pt}"
 				else
 					cat | "${tail}" -n +2
 				fi
