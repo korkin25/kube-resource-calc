@@ -10,6 +10,30 @@ END
 	exit 1
 }
 
+jq="$(which jq)"
+if [ ! -x "${jq}" ]; then
+	echo Need jq
+	exit 1
+fi
+
+bash="$(which bash)"
+if [ ! -x "${bash}" ]; then
+	echo Need bash
+	exit 1
+fi
+
+tail="$(which tail)"
+if [ ! -x "${tail}" ]; then
+	echo Need tail
+	exit 1
+fi
+
+sed="$(which sed)"
+if [ ! -x "${sed}" ]; then
+	echo Need sed
+	exit 1
+fi
+
 pretty=1
 
 if [ $# -gt 0 ]; then
@@ -35,13 +59,12 @@ pt=prettytable.sh/prettytable.sh
 for ns in $(kubectl get ns --no-headers=true | awk '{print $1}'); do
 	for type in deploy ds statefulsets; do
 		for deploy in $(kubectl -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | awk '{print $1}' ) ; do
-		    tmp="$(mktemp)"
+			tmp="$(mktemp)"
 			kubectl -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
-			replicas=$(jq '" \(.spec.replicas) "' < "${tmp}"| sed -r 's/("|\ )//g')
-			for container in $(jq '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | sed -r 's/("|\ )//g'); do
-				printf "${ns} ${type} ${deploy} ${replicas} ${container}"
-				jq '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | sed 's/"//g'
-				
+			replicas=$("${jq}" '" \(.spec.replicas) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
+			for container in $("${jq}" '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | "${sed}" -r 's/("|\ )//g'); do
+                    		printf "${ns} ${type} ${deploy} ${replicas} ${container}"
+                    		"${jq}" '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | "${sed}" 's/"//g'
 			done
 			rm "${tmp}"
 		done
@@ -97,8 +120,8 @@ done |
 		}' | 
 			(
 				if [ "${pretty}" -eq 1 ]; then
-					/bin/bash "${pt}"
+					"${bash}" "${pt}"
 				else
-					cat | tail -n +2
+					cat | "${tail}" -n +2
 				fi
 			)
