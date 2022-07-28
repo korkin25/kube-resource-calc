@@ -12,7 +12,9 @@ TODO:
 - [ ] kube state metrics: query workload resource usage stats
 - [ ] prometheus support: query long time workload resource usage stats
 
+Output example:
 
+![image](https://user-images.githubusercontent.com/28926495/181489927-ea8129e9-39bb-4488-a04a-7e5f99939fd2.png)
 
 	
 	
