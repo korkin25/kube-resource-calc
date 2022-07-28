@@ -24,7 +24,7 @@ if [ $# -gt 0 ]; then
 	if [ "${1}" = "-h" ]; then
 		usage
 	fi	
-	if [ ! -z "${1}" ]; then
+	if [ -n "${1}" ]; then
 		echo Unknown flag
 		usage
 	fi
@@ -37,10 +37,10 @@ for ns in $(kubectl get ns --no-headers=true | awk '{print $1}'); do
 		for deploy in $(kubectl -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | awk '{print $1}' ) ; do
 		    tmp="$(mktemp)"
 			kubectl -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
-			replicas=$(cat "${tmp}" | jq '" \(.spec.replicas) "' | sed -r 's/("|\ )//g')
-			for container in $(cat "${tmp}" | jq '" \(.spec.template.spec.containers[].name)"' | sed -r 's/("|\ )//g'); do
+			replicas=$(jq '" \(.spec.replicas) "' < "${tmp}"| sed -r 's/("|\ )//g')
+			for container in $(jq '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | sed -r 's/("|\ )//g'); do
 				printf "${ns} ${type} ${deploy} ${replicas} ${container}"
-				cat "${tmp}" | jq '.spec.template.spec.containers[] | select (.name=="'${container}'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' | sed 's/"//g'
+				jq '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | sed 's/"//g'
 				
 			done
 			rm "${tmp}"
@@ -97,7 +97,7 @@ done |
 		}' | 
 			(
 				if [ "${pretty}" -eq 1 ]; then
-					bash "${pt}"
+					/bin/bash "${pt}"
 				else
 					cat | tail -n +2
 				fi
