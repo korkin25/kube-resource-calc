@@ -185,9 +185,9 @@ done |
 		}' | 
 			(
 				if [ "${pretty}" -eq 1 ]; then
-					
-					"${bash}" "${pt}"
+					cmd="${bash} ${pt}"
 				else
-					cat | "${tail}" -n +2
+					cmd="cat | ${tail} -n +2"
 				fi
+				$cmd
 			)
