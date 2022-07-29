@@ -14,45 +14,15 @@ log(){
 	echo "--- ${*}" 1>&2
 }
 
-jq="$(which jq)"
-if [ ! -x "${jq}" ]; then
-	log Need jq
-	exit 1
-fi
-
-bash="$(which bash)"
-if [ ! -x "${bash}" ]; then
-	log Need bash
-	exit 1
-fi
-
-tail="$(which tail)"
-if [ ! -x "${tail}" ]; then
-	log Need tail
-	exit 1
-fi
-
-sed="$(which sed)"
-if [ ! -x "${sed}" ]; then
-	log Need sed
-	exit 1
-fi
-
-wget="$(which wget)"
-if [ ! -x "${sed}" ]; then
-	log wget not found. It may be required
-fi
-
-md5sum="$(which md5sum)"
-if [ ! -x "${md5sum}" ]; then
-	log md5sum not found. It may be required
-fi
-
-kubectl="$(which kubectl)"
-if [ ! -x "${kubectl}" ]; then
-	log Need kubectl
-	exit 1
-fi
+required_stack="jq bash tail sed wget kubectl awk md5sum"
+for cmd in $required_stack; do
+	cmd_test="$(which "${cmd}" )"
+	if [ ! -x "${cmd_test}" ]; then
+		log Need "${cmd}"
+		exit 1
+	fi
+	declare "${cmd}"="${cmd_test}"
+done
 
 pretty=1
 
@@ -121,9 +91,9 @@ fi
 
 
 
-for ns in $("${kubectl}" get ns --no-headers=true | awk '{print $1}'); do
+for ns in $("${kubectl}" get ns --no-headers=true | "${awk}" '{print $1}'); do
 	for type in deploy ds statefulsets; do
-		for deploy in $("${kubectl}" -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | awk '{print $1}' ) ; do
+		for deploy in $("${kubectl}" -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | "${awk}" '{print $1}' ) ; do
 			tmp="$(mktemp)"
 			"${kubectl}" -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
 			replicas=$("${jq}" '" \(.spec.replicas) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
@@ -135,7 +105,7 @@ for ns in $("${kubectl}" get ns --no-headers=true | awk '{print $1}'); do
 		done
 	done
 done | 
-	awk '
+	"${awk}" '
 		function get_num_by_suff(str,suff) {
 			if (index(str,suff) !=0 ) {
 					split(str,num,suff)
