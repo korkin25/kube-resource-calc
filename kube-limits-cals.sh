@@ -1,5 +1,102 @@
 #!/bin/bash
 
+
+#### prettytable related code is imported from https://github.com/jakobwesthoff/prettytable.sh
+
+####
+# Copyright (c) 2016-2021
+#   Jakob Westhoff <jakob@westhoffswelt.de>
+#
+####
+
+_prettytable_char_top_left="┌"
+_prettytable_char_horizontal="─"
+_prettytable_char_vertical="│"
+_prettytable_char_bottom_left="└"
+_prettytable_char_bottom_right="┘"
+_prettytable_char_top_right="┐"
+_prettytable_char_vertical_horizontal_left="├"
+_prettytable_char_vertical_horizontal_right="┤"
+_prettytable_char_vertical_horizontal_top="┬"
+_prettytable_char_vertical_horizontal_bottom="┴"
+_prettytable_char_vertical_horizontal="┼"
+
+
+# Escape codes
+
+# Default colors
+_prettytable_color_blue="0;34"
+_prettytable_color_green="0;32"
+_prettytable_color_cyan="0;36"
+_prettytable_color_red="0;31"
+_prettytable_color_purple="0;35"
+_prettytable_color_yellow="0;33"
+_prettytable_color_gray="1;30"
+_prettytable_color_light_blue="1;34"
+_prettytable_color_light_green="1;32"
+_prettytable_color_light_cyan="1;36"
+_prettytable_color_light_red="1;31"
+_prettytable_color_light_purple="1;35"
+_prettytable_color_light_yellow="1;33"
+_prettytable_color_light_gray="0;37"
+
+# Somewhat special colors
+_prettytable_color_black="0;30"
+_prettytable_color_white="1;37"
+_prettytable_color_none="0"
+
+function _prettytable_prettify_lines() {
+    cat - | sed -e "s@^@${_prettytable_char_vertical}@;s@\$@	@;s@	@	${_prettytable_char_vertical}@g"
+}
+
+function _prettytable_fix_border_lines() {
+    cat - | sed -e "1s@ @${_prettytable_char_horizontal}@g;3s@ @${_prettytable_char_horizontal}@g;\$s@ @${_prettytable_char_horizontal}@g"
+}
+
+function _prettytable_colorize_lines() {
+    local color="$1"
+    local range="$2"
+    local ansicolor="$(eval "echo \${_prettytable_color_${color}}")"
+
+    cat - | sed -e "${range}s@\\([^${_prettytable_char_vertical}]\\{1,\\}\\)@"$'\E'"[${ansicolor}m\1"$'\E'"[${_prettytable_color_none}m@g"
+}
+
+function prettytable() {
+    local cols="${1}"
+    local color="${2:-none}"
+    local input="$(cat -)"
+    local header="$(echo -e "${input}"|head -n1)"
+    local body="$(echo -e "${input}"|tail -n+2)"
+    {
+        # Top border
+        echo -n "${_prettytable_char_top_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal_top}"
+        done
+        echo -e "\t${_prettytable_char_top_right}"
+
+        echo -e "${header}" | _prettytable_prettify_lines
+
+        # Header/Body delimiter
+        echo -n "${_prettytable_char_vertical_horizontal_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal}"
+        done
+        echo -e "\t${_prettytable_char_vertical_horizontal_right}"
+
+        echo -e "${body}" | _prettytable_prettify_lines
+
+        # Bottom border
+        echo -n "${_prettytable_char_bottom_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal_bottom}"
+        done
+        echo -e "\t${_prettytable_char_bottom_right}"
+    } | column -t -s $'\t' | _prettytable_fix_border_lines | _prettytable_colorize_lines "${color}" "2"
+}
+
+#### end of imported code
+
 usage()
 {
 	cat << END 1>&2
@@ -14,7 +111,7 @@ log(){
 	echo "--- ${*}" 1>&2
 }
 
-required_stack="jq bash tail sed wget kubectl awk md5sum"
+required_stack="jq bash tail sed wget kubectl awk"
 for cmd in $required_stack; do
 	cmd_test="$(which "${cmd}" )"
 	if [ ! -x "${cmd_test}" ]; then
@@ -43,53 +140,6 @@ if [ $# -gt 0 ]; then
 		usage
 	fi
 fi
-
-pt_url="https://github.com/jakobwesthoff/prettytable.sh/raw/c5d52169e9bf6ab6a56595f8a9084e9bcd30bc5a/prettytable.sh"
-pt_md5="404f68d34943f8ca20aa326d0c79ca23"
-
-md5_check() {
-	if [ $# -ne 2 ]; then
-		log Usage: md5_check "${pt_md5} pretytable.sh" 
-		exit 1
-	fi
-	
-	echo "${1} ${2}" | "${md5sum}" -c 1>&2
-	return $?
-}
-
-download_pretytable() {
-	local pt="${1}"
-	log "Downloading ${pt_url} -> ${pt}"
-	wget_log="$(mktemp)"
-	log "$("${wget}" -c -t 3 -O "${pt}" "${pt_url}" 2>&1 | tee "${wget_log}" | grep saved )"
-	
-	if md5_check "${pt_md5}" "${pt}"; then
-		log  "MD5 sum checked"
-	else
-		log "Unable to download prettytable.sh from ${pt_url} and save to ${pt}"
-		cat "${wget_log}" 1>&2
-		exit 1
-	fi
-	rm "${wget_log}"
-}
-
-pt="$(dirname "${0}")/prettytable.sh/prettytable.sh"
-
-if [ ! -r "${pt}" ]; then
-	pt="${0}.prettytable.sh"
-	if [ ! -r "${pt}" ]; then
-		download_pretytable "${pt}"
-	else
-		
-		if md5_check "${pt_md5}" "${pt}"; then
-			log Using cached "${pt}"
-		else
-			download_pretytable "${pt}"
-		fi
-	fi
-fi
-
-
 
 for ns in $("${kubectl}" get ns --no-headers=true | "${awk}" '{print $1}'); do
 	for type in deploy ds statefulsets; do
@@ -155,9 +205,10 @@ done |
 		}' | 
 			(
 				if [ "${pretty}" -eq 1 ]; then
-					cmd="${bash} ${pt}"
+					cmd="prettytable"
 				else
 					cmd="cat | ${tail} -n +2"
 				fi
 				$cmd
 			)
+
