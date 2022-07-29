@@ -146,7 +146,11 @@ for ns in $("${kubectl}" get ns --no-headers=true | "${awk}" '{print $1}'); do
 		for deploy in $("${kubectl}" -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | "${awk}" '{print $1}' ) ; do
 			tmp="$(mktemp)"
 			"${kubectl}" -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
-			replicas=$("${jq}" '" \(.spec.replicas) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
+			if [ "${type}" = "ds" ]; then
+				replicas=$("${jq}" '" \(.status.numberAvailable) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
+			else
+				replicas=$("${jq}" '" \(.spec.replicas) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
+			fi
 			for container in $("${jq}" '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | "${sed}" -r 's/("|\ )//g'); do
                     		printf "${ns} ${type} ${deploy} ${replicas} ${container}"
                     		"${jq}" '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | "${sed}" 's/"//g'
