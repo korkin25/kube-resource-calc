@@ -1,8 +1,26 @@
 #!/bin/bash
 
+JQ="/usr/bin/jq"
+BASH="/bin/bash"
+TAIL="/usr/bin/tail"
+SED="/usr/bin/sed"
+WGET="/usr/bin/wget"
+MD5SUM="/usr/bin/md5sum"
+KUBECTL="/usr/local/bin/kubectl"
+AWK="/usr/bin/awk"
+RM="/usr/bin/rm"
+CAT="/usr/bin/cat"
+ECHO="/usr/bin/echo"
+TEE="/usr/bin/tee"
+GREP="/usr/bin/grep"
+MKTEMP="/usr/bin/mktemp"
+DIRNAME="/usr/bin/dirname"
+
+
+
 usage()
 {
-	cat << END 1>&2
+	${CAT} << END 1>&2
 ${0} options:
 
 	--tabbed -- switch pretty output to space delimited (to use in spreadsheets&etc)
@@ -11,48 +29,9 @@ END
 }
 
 log(){
-	echo "--- ${*}" 1>&2
+	${ECHO} "--- ${*}" 1>&2
 }
 
-jq="$(which jq)"
-if [ ! -x "${jq}" ]; then
-	log Need jq
-	exit 1
-fi
-
-bash="$(which bash)"
-if [ ! -x "${bash}" ]; then
-	log Need bash
-	exit 1
-fi
-
-tail="$(which tail)"
-if [ ! -x "${tail}" ]; then
-	log Need tail
-	exit 1
-fi
-
-sed="$(which sed)"
-if [ ! -x "${sed}" ]; then
-	log Need sed
-	exit 1
-fi
-
-wget="$(which wget)"
-if [ ! -x "${sed}" ]; then
-	log wget not found. It may be required
-fi
-
-md5sum="$(which md5sum)"
-if [ ! -x "${md5sum}" ]; then
-	log md5sum not found. It may be required
-fi
-
-kubectl="$(which kubectl)"
-if [ ! -x "${kubectl}" ]; then
-	log Need kubectl
-	exit 1
-fi
 
 pretty=1
 
@@ -83,27 +62,27 @@ md5_check() {
 		exit 1
 	fi
 	
-	echo "${1} ${2}" | "${md5sum}" -c 1>&2
+	${ECHO} "${1} ${2}" | "${MD5SUM}" -c 1>&2
 	return $?
 }
 
 download_pretytable() {
 	local pt="${1}"
 	log "Downloading ${pt_url} -> ${pt}"
-	wget_log="$(mktemp)"
-	log "$("${wget}" -c -t 3 -O "${pt}" "${pt_url}" 2>&1 | tee "${wget_log}" | grep saved )"
+	wget_log="$(${MKTEMP})"
+	log "$("${WGET}" -c -t 3 -O "${pt}" "${pt_url}" 2>&1 | ${TEE} "${wget_log}" | ${GREP} saved )"
 	
 	if md5_check "${pt_md5}" "${pt}"; then
 		log  "MD5 sum checked"
 	else
 		log "Unable to download prettytable.sh from ${pt_url} and save to ${pt}"
-		cat "${wget_log}" 1>&2
+		${CAT} "${wget_log}" 1>&2
 		exit 1
 	fi
-	rm "${wget_log}"
+	${RM} "${wget_log}"
 }
 
-pt="$(dirname "${0}")/prettytable.sh/prettytable.sh"
+pt="$(${DIRNAME} "${0}")/prettytable.sh/prettytable.sh"
 
 if [ ! -r "${pt}" ]; then
 	pt="${0}.prettytable.sh"
@@ -121,21 +100,21 @@ fi
 
 
 
-for ns in $("${kubectl}" get ns --no-headers=true | awk '{print $1}'); do
+for ns in $("${KUBECTL}" get ns --no-headers=true | ${AWK} '{print $1}'); do
 	for type in deploy ds statefulsets; do
-		for deploy in $("${kubectl}" -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | awk '{print $1}' ) ; do
-			tmp="$(mktemp)"
-			"${kubectl}" -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
-			replicas=$("${jq}" '" \(.spec.replicas) "' < "${tmp}"| "${sed}" -r 's/("|\ )//g')
-			for container in $("${jq}" '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | "${sed}" -r 's/("|\ )//g'); do
+		for deploy in $("${KUBECTL}" -n "${ns}" get "${type}" --no-headers=true 2>/dev/null | ${AWK} '{print $1}' ) ; do
+			tmp="$(${MKTEMP})"
+			"${KUBECTL}" -n "${ns}" get "${type}" "${deploy}" -o json > "${tmp}"
+			replicas=$("${JQ}" '" \(.spec.replicas) "' < "${tmp}"| "${SED}" -r 's/("|\ )//g')
+			for container in $("${JQ}" '" \(.spec.template.spec.containers[].name)"' < "${tmp}" | "${SED}" -r 's/("|\ )//g'); do
                     		printf "${ns} ${type} ${deploy} ${replicas} ${container}"
-                    		"${jq}" '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | "${sed}" 's/"//g'
+                    		"${JQ}" '.spec.template.spec.containers[] | select (.name=="'"${container}"'")  | " \(.resources.limits.cpu) \(.resources.limits.memory)"' < "${tmp}" | "${SED}" 's/"//g'
 			done
-			rm "${tmp}"
+			${RM} "${tmp}"
 		done
 	done
 done | 
-	awk '
+	${AWK} '
 		function get_num_by_suff(str,suff) {
 			if (index(str,suff) !=0 ) {
 					split(str,num,suff)
@@ -185,9 +164,9 @@ done |
 		}' | 
 			(
 				if [ "${pretty}" -eq 1 ]; then
-					cmd="${bash} ${pt}"
+					cmd="${BASH} ${pt}"
 				else
-					cmd="cat | ${tail} -n +2"
+					cmd="${CAT} | ${TAIL} -n +2"
 				fi
 				$cmd
 			)
